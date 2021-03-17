@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="no" ?>
+<!DOCTYPE Policies SYSTEM "../dtd/accesscontrolpolicies.dtd">
+
+<Policies>
+ 	
+	<ResourceCategory Name="com.hcl.commerce.cmc.commands.DisplayProductDetailsCmdResourceCategory"
+			ResourceBeanClass="com.hcl.commerce.cmc.commands.DisplayProductDetailsCmd">
+		<ResourceAction Name="ExecuteCommand" />
+	</ResourceCategory>	
+		
+	<ResourceGroup Name="SellerAdministratorsCommandsResourceGroup"  OwnerID="RootOrganization">
+		<ResourceGroupResource Name="com.hcl.commerce.cmc.commands.DisplayProductDetailsCmdResourceCategory" />
+	</ResourceGroup>
+ 
+</Policies>
