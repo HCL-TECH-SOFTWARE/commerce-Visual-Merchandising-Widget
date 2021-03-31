@@ -1,0 +1,56 @@
+<div id="container" class="merchandising-widget">
+	<div class="merchandising-widget-header hc-paper">
+		<div class="merchandising-widget-input">
+			<div class="hc-type-text">
+				<h5>{{categoryName}} - Catalog Entries List </h5>
+			</div>
+		</div>
+		<div class="merchandising-widget-input merchandising-widget-toggle-button">
+			<mat-checkbox #toggleseqchkbox [checked]="isChecked" (change)="toggleDragndrop($event)" [disabled]="false">
+				<span class="share-url-text">Toggle Sequencing</span>
+			</mat-checkbox>
+			<button mat-raised-button color="primary" [disabled]="enableSaveResetButton()" (click)="saveData()">Save Data</button>
+			<button mat-raised-button color="secondary" [disabled]="enableSaveResetButton()" (click)="resetData()">Reset Data</button>
+		</div>
+	</div>
+	<div class="merchandising-widget-wrapper">
+		<div *ngIf="products.length>0" #rowLayout cdkDropListGroup cdkDropListGroupDisabled="{{!isChecked}}" >
+			<div style="display: flex;flex-direction: row;justify-content: flex-start;" fxLayout="row"
+				*ngFor="let itemsRow of getItemsTable(rowLayout)" cdkDropList cdkDropListOrientation="horizontal"
+				[cdkDropListData]="itemsRow" (cdkDropListDropped)="reorderDroppedItem($event)" >
+				<div class="box-data" *ngFor="let item of itemsRow" cdkDrag [cdkDragData]="item" (cdkDragMoved)="onDragMoved($event)">
+					<div class="drag-placeholder" *cdkDragPlaceholder></div>
+					<div fxLayoutAlign="center center" class="item-box"
+						[ngClass]="{'changed-item': item.isChanged === true}">
+						<mat-card class="product-card">
+							<mat-card-header>
+								<div mat-card-avatar class="prod-sequence">{{item.sequence}}</div>
+								<mat-card-title>{{item.name}}</mat-card-title>
+								<mat-card-subtitle>{{item.part_number}}</mat-card-subtitle>
+							</mat-card-header>
+							<img mat-card-image
+								[src]="item.thumbnail_path? 'https://localhost:6443/hclstore/EmeraldCAS'+item.thumbnail_path:'https://kubalubra.is/wp-content/uploads/2017/11/default-thumbnail.jpg'"
+								(error)="loadDummyImage($event)"
+								alt="thumbnail">
+							<mat-card-content>
+								<!--<p>
+									<mat-label>Manufacture : </mat-label>  {{item.manufacturer}}https://localhost:7443/lobtools/LoadImage?storeId=10501&imageURL=
+								</p>
+								<p>
+									<mat-label>Catalog ID : </mat-label> : {{item.catalogId}}
+								</p>
+								<p>
+									<mat-label>Display to Customer</mat-label> : {{item.attributes[0].displayable}}
+								</p> -->
+							</mat-card-content>
+						</mat-card>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!--pagination -->
+		<mat-paginator #paginator [length]="length" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
+			(page)="pageEvent = $event; onPaginateChange($event)" style="font-size: 14px ;" >
+		</mat-paginator>
+	</div>
+</div>

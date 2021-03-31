@@ -1,0 +1,886 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+ =================================================================
+  Copyright [2021] [HCL Technologies]
+	
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+	
+	    http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+ =================================================================
+-->
+
+<Definitions>
+<!-- Merchandising Widget Work-->
+<Dialog definitionName="cmc/foundation/ResequenceDialog" classDefinition="true" title="Resequence Catalog Items">
+		<dependency localName="foundationResources" moduleName="cmc/foundation/FoundationResources"/>
+		<dependency localName="RootComponent" moduleName="cmc/RootComponent"/>
+		<dependency localName="EventHandler" moduleName="cmc/foundation/EventHandler"/>
+		<dependency localName="ContextUtil" moduleName="cmc/foundation/ContextUtil"/>	
+		<dependency localName="PreferenceManager" moduleName="cmc/shell/PreferenceManager"/>
+		<dependency localName="RootComponent" moduleName="cmc/RootComponent"/>
+		<dependency localName="SingletonRegistry" moduleName="cmc/foundation/SingletonRegistry"/>
+		<!---
+			@keywords private
+			The url of the Resequence Catalog Item URL.
+		-->
+		<variable name="resequenceCatalogItemUrl" type="string" value=""/>		
+		<variable name="o"  />	
+		<!---
+			@keywords private
+		-->
+		<method name="init">
+			<![CDATA[
+			this.inherited(arguments);
+			var self = this;
+		]]>
+		</method>
+
+		<!---
+			Close the dialog.
+		-->
+		<method name="closeWindow">
+			<![CDATA[
+			this.inherited(arguments);
+			o.model.refreshDescendants(o, true);						
+			this.setVariable("resequenceCatalogItemUrl", "");
+			this.setVariable("o", null);
+			]]>
+		</method>
+		
+		<!---
+			Open the dialog.
+		-->
+		<method args="resequenceCatalogItemUrl,o" name="openDialog">
+			<![CDATA[	
+				this.openWindow();
+				this.setVariable("resequenceCatalogItemUrl", resequenceCatalogItemUrl);	
+				this.setVariable("o",o);
+			]]>
+		</method>
+
+		
+		<!---
+			Process message. Override this method when necessary.
+		-->
+		<method args="message" name="processMessage">
+			<![CDATA[
+				return message;
+			]]>
+		</method>
+		
+		
+		
+		<method name="receiveMessage" args="message">
+			<![CDATA[
+			if (this.iframe && this.iframe.widget && this.iframe.widget.iframeNode && (message.source === this.iframe.widget.iframeNode.contentWindow || message.source === window)) {
+				var action = message.data.action;
+				var data = message.data.data;
+				if (action == "FETCH_RENDER_VIEW_DATA") {
+					postRenderViewData();
+				} else if (action == "JWT_FETCH_REQUEST") {
+					RootComponent.Singleton.doSessionTimeout();
+				}
+				else if (action == "DARK_FEATURES_FETCH_REQUEST") {
+					postDarkFeatures();
+				}
+				else if (action == "API_HOST_FETCH_REQUEST") {
+					postApiHost();
+				}
+				else if (action == "STORE_PREVIEW_DATA_FETCH_REQUEST") {
+					postStorePreviewData();
+				}
+				else if (action == "POST_STATUS") {
+					if(data.statusType == "success") {
+						MessageLogger.Singleton.logStatus(data.statusContent);
+					}
+					if(data.statusType == "error") {
+						MessageLogger.Singleton.logException(null, data.statusContent);
+					}
+				} else if (action == "START_PROGRESS_INDICATOR") {
+					if (SingletonRegistry.progressIndicator != undefined) {
+						SingletonRegistry.progressIndicator.startAnimation();
+						this.progressCounter++;
+					}
+				} else if (action == "STOP_PROGRESS_INDICATOR") {
+					if (SingletonRegistry.progressIndicator != undefined) {
+						if (this.progressCounter > 0) {
+							this.progressCounter--;
+							SingletonRegistry.progressIndicator.stopAnimation();
+						}
+					}
+				}
+				else if (action == "SHOW_HELP") {
+					var helpType =data.helpType;
+					if (helpType == "gettingStarted" ) {
+						require(["cmc/shell/HelpManager"], function(HelpManager) {
+							HelpManager.Singleton.openGettingStarted();
+						});
+					} else if (helpType == "infoCenter" ) {
+						require(["cmc/shell/HelpManager"], function(HelpManager) {
+							HelpManager.Singleton.openInfoCenter();
+						});
+					} else if (helpType == "contextSensitive" ) {
+						require(["cmc/shell/HelpManager"], function(HelpManager) {
+							HelpManager.Singleton.openContextSensitiveHelp();
+						});
+					}
+				} else if (action == "SET_PREFERRED_STORE") {
+					var preferredStore = data.store;
+					if (data.store) {
+						PreferenceManager.Singleton.setPreference("CMCDefaultStore", preferredStore);
+					}
+				}
+			}
+			]]>
+		</method>
+
+		<!---
+			@keywords private
+			This method posts the API_HOST message to the iframe.
+		-->
+		<method name="postApiHost">
+			<![CDATA[
+			var apiHost = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port;
+			this.iframe.postMessage({
+				"action": "API_HOST",
+				"data": {
+					"apiHost": apiHost
+				}
+			});
+			]]>
+		</method>
+
+		<!---
+			@keywords private
+			This method posts the DARK_FEATURES message to the iframe.
+		-->
+		<method name="postDarkFeatures">
+			<![CDATA[
+			this.iframe.postMessage({
+				"action": "DARK_FEATURES",
+				"data": {
+					"darkFeatures": darkFeatures
+				}
+			});
+			]]>
+		</method>
+
+		<!---
+			@keywords private
+			This method posts the STORE_PREVIEW_DATA message to the iframe.
+		-->
+		<method name="postStorePreviewData">
+			<![CDATA[
+			// get preview options cached by the preview options dialog.		
+			var storePreviewOptions = ContextUtil.Singleton.findContextValue(null, "storePreviewOptions").value;
+			
+			this.iframe.postMessage({
+				"action": "STORE_PREVIEW_DATA",
+				"data": storePreviewOptions
+			});
+			]]>
+		</method>
+
+		<!---
+			@keywords private
+			This method posts the RENDER_VIEW_DATA message to the iframe.
+		-->
+		<method name="postRenderViewData">
+			<![CDATA[
+			
+			this.languageMapping = {
+				"de-DE": "de",
+				"en-US": "en",
+				"es-ES": "es",
+				"fr-FR": "fr",
+				"it-IT": "it",
+				"ja-JP": "ja",
+				"ko-KR": "ko",
+				"pl-PL": "pl",
+				"ru-RU": "ru",
+				"zh-CN": "zh"
+			};
+			if (this.postRenderViewDataDel) {
+				this.postRenderViewDataDel.disconnectAll();
+			}
+			else {
+				this.postRenderViewDataDel = new EventHandler.Class(this, "postRenderViewData");
+			}
+			var locale = ContextUtil.Singleton.findContextValue(null, "locale", this.postRenderViewDataDel).value.replace("_", "-");
+			var language = this.languageMapping[locale] ? this.languageMapping[locale] : locale;
+			this.iframe.postMessage({
+				"action": "RENDER_VIEW_DATA",
+				"data": {
+					"token": ContextUtil.Singleton.findContextValue(null, "jwt").value,
+					"userId": ContextUtil.Singleton.findContextValue(null, "userId").value,
+					"language": language,
+					"locale": locale,
+					"store": PreferenceManager.Singleton.getPreference("CMCDefaultStore"),
+					"navigationDisabled": RootComponent.Singleton.navigationDisabled
+				}
+			});
+			]]>
+		</method>
+
+		<!---
+			@keywords private
+			This method posts the JWT message to the iframe.
+		-->
+		<method name="postJwt">
+			<![CDATA[
+			if (this.postJwtDel) {
+				this.postJwtDel.disconnectAll();
+			}
+			else {
+				this.postJwtDel = new EventHandler.Class(this, "postJwt");
+			}
+			var jwt = ContextUtil.Singleton.findContextValue(null, "jwt", this.postJwtDel).value;
+			if (jwt != null) {
+				this.iframe.postMessage({
+					"action": "JWT",
+					"data": {
+						"token": jwt
+					}
+				});
+			}
+			]]>
+		</method>
+		  <BaseIFrameComponent name="iframe" src="${this.parent.resequenceCatalogItemUrl}" height="600" width="1250">
+		  
+		 <handler name="oninit">
+				<![CDATA[				
+				var self = this.classroot;
+				  console.log("mesage init",this);
+				  this.classroot.postRenderViewData();
+				this.classroot.postJwt();
+			    window.addEventListener("message", function(e){
+			    console.log("mesage listend",e);
+				self.receiveMessage(e);
+			});
+				]]>
+			</handler> 
+		</BaseIFrameComponent> 
+		
+		
+	</Dialog>
+	
+	<ResequenceDialog definitionName="cmc/foundation/ResequenceCatalogItemsDialog" singletonDefinition="true" >
+	
+		<!---
+			Process message.
+		-->
+		<method args="message" name="processMessage">
+			<![CDATA[
+				return message;
+			]]>
+		</method>
+	
+	</ResequenceDialog>
+<Button classDefinition="true" definitionName="cmc/catalog/ResequenceButton" text="Resequence">
+		<dependency localName="EventHandler" moduleName="cmc/foundation/EventHandler"/>
+		<dependency localName="RootComponent" moduleName="cmc/RootComponent"/>
+		<variable name="dialogClass" type="string" value="cmc/foundation/ResequenceCatalogItemsDialog"/>
+		
+		
+		<!---
+			Action definition instance.
+		-->
+		<variable name="actionDefinition"/>
+		
+			<!--- @keywords private -->
+			<handler name="onclick">
+				<![CDATA[
+				var o = this.actionDefinition.parent.o;
+			 console.log("onclick",o.getReferencedObject());
+					if (o != null) {
+					var catgroupId = o.getPropertyValue("catgroupId");
+						var catgroupName = o.objectDisplayName;
+						var storeId=o.objectStoreId;
+						console.log("catgroupId="+catgroupId,o.objectStoreId);					
+						var resequenceCatalogItemUrl = "https://localhost:7443/tooling/merchandising-widget?categoryName="+catgroupName+"&categoryId="+catgroupId+"&storeId="+storeId;
+					
+						if (!this.resequenceCatalogItemCompleteDel) {
+							this.resequenceCatalogItemCompleteDel = new EventHandler.Class(this, "resequenceCatalogItemComplete");
+						}
+						this.resequenceCatalogItemCompleteDel.connect(RootComponent.Singleton, "oncallbackvalue");
+						
+						if (this.dialogClass && this.dialogClass != ""){ 
+							require([this.dialogClass], function(ResequenceDialog) {
+								ResequenceDialog.Singleton.openDialog(resequenceCatalogItemUrl,o);
+							});
+						}
+					}
+				]]>
+			</handler>
+			<method args="returnValue" name="resequenceCatalogItemComplete">
+				<![CDATA[
+					console.log(returnValue);
+					
+				]]>
+			</method>
+			
+	</Button>
+
+	<ObjectPropertiesActionDefinition classDefinition="true" definitionName="cmc/foundation/CustomActionDefinition">
+		<!--- @keywords private -->
+		<handler name="oninit">
+			<![CDATA[
+			console.log("CustomActionDefinition init");
+			console.log(this);
+			var actions = this.parent.parent.actions;
+			if (!actions) {
+				actions = [];
+				this.parent.parent.actions = actions;
+			}
+			actions.push(this);
+			]]>
+		</handler>
+		<!--- @keywords private -->
+		<handler name="ondestroy">
+			<![CDATA[
+			var index = this.parent.parent.actions.indexOf(this);
+			this.parent.parent.actions.splice(index, 1);
+			]]>
+		</handler>
+	</ObjectPropertiesActionDefinition>
+	<!--
+		This definition is used to navigate the catalog entries underneath catalog groups.
+	-->
+	<ChildListEditor definitionName="cmc/catalog/CatalogEntryChildList" listDefinition="cmc/catalog/CatalogEntryBrowseGrid" objectTypes="ChildProduct,ChildCatalogGroupSKU,ChildKit,ChildBundle,ChildVariant,ChildInheritedProduct,ChildInheritedCatalogGroupSKU,ChildInheritedKit,ChildInheritedBundle,ChildInheritedVariant">
+	<CustomActionDefinition actionWidgetClass="cmc/catalog/ResequenceButton"/>
+	</ChildListEditor>
+<!-- Merchandising Widget Work-->
+	<!--
+		This definition is used to list the catalog entries underneath the unassigned catalog group.
+	-->
+	<ChildListEditor definitionName="cmc/catalog/UnassignedCatalogEntryChildList" listDefinition="cmc/catalog/CatalogEntrySearchGrid" objectTypes="Product,ProductSKU,Kit,Bundle,Variant,InheritedProduct,InheritedProductSKU,InheritedKit,InheritedBundle,InheritedVariant"/>
+
+	<!--
+		This definition is used to list the catalog entries underneath sales catalog groups.
+	-->
+	<ChildListEditor definitionName="cmc/catalog/SalesCatalogEntryChildList" listDefinition="cmc/catalog/CatalogEntryBrowseGrid" objectTypes="ChildSalesCatalogEntry,ChildSalesInheritedCatalogEntry"/>
+
+	<!--
+		This definition is used to list the SKUs for a product.
+	-->
+	<ChildListEditor definitionName="cmc/catalog/ProductChildSKUList" listDefinition="cmc/catalog/ProductChildSKUGrid" objectTypes="ProductChildSKU,ProductChildInheritedSKU"/>
+	
+	<!--
+		This definition is used to list the SKUs for a variant.
+	-->
+	<ChildListEditor definitionName="cmc/catalog/VariantChildSKUList" listDefinition="cmc/catalog/VariantChildSKUGrid" objectTypes="VariantChildSKU,VariantChildInheritedSKU"/>
+
+	<!--
+		This definition is used to list the SKUs for a product.
+	-->
+    <ChildListEditor definitionName="cmc/catalog/ProductChildVariantList" listDefinition="cmc/catalog/ProductChildVariantGrid" objectTypes="ProductChildVariant,ProductChildInheritedVariant"/>
+
+	<!--
+		This definition is used to list the PDKs for a Dynamic Kit.
+	-->
+	<ChildListEditor definitionName="cmc/catalog/DynamicKitChildPDKList" listDefinition="cmc/catalog/DynamicKitChildPDKGrid" objectTypes="DynamicKitChildPDK,DynamicKitChildInheritedPDK"/>
+
+	<!---
+		This definition displays the contents and characteristics of a list of the following objects:
+		{@link cmc/catalog/ChildProduct},{@link cmc/catalog/ChildInheritedProduct},{@link cmc/catalog/ChildCatalogGroupSKU},{@link cmc/catalog/ChildInheritedCatalogGroupSKU},
+		{@link cmc/catalog/ChildKit}, {@link cmc/catalog/ChildInheritedKit},{@link cmc/catalog/ChildBundle}, {@link cmc/catalog/ChildInheritedBundle},
+		{@link cmc/catalog/ChildProductSKU}, {@link cmc/catalog/ChildInheritedProductSKU},{@link cmc/catalog/ChildSalesCatalogEntry} and {@link cmc/catalog/ChildSalesInheritedCatalogEntry}.
+	-->
+	<ObjectGrid definitionName="cmc/catalog/CatalogEntryBrowseGrid" preferenceKey="catCatalogEntryBrowseGrid">
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+		<GridNumeric editable="true" name="sequence" numDecimalPlaces="1" propertyName="sequence" required="false" text="${catalogResources.displaySequence}" visible="true" width="130"/>
+		<GridText editable="false" name="catentryId" objectPath="CatalogEntry" propertyName="catentryId" text="${catalogResources.productUniqueId_ColumnHeader}" visible="false" width="90"/>
+		<GridIconTypeImage enableFilter="true" name="typeIcon" propertyName="null" required="true" text="${catalogResources.productType_ColumnHeader}" visible="true" width="80"/>
+		<GridStoreName name="store" objectPath="CatalogEntry" width="125"/>
+		<GridText editable="false" name="ownerId" objectPath="CatalogEntry" propertyName="ownerId" text="${catalogResources.productOwnerId_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="true" name="partNumber" objectPath="CatalogEntry" propertyName="partnumber" required="true" text="${catalogResources.productPartnumber_ColumnHeader}" visible="true" width="100"/>
+		<GridText name="catalogEntryName" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="name" text="${catalogResources.productName_ColumnHeader}" visible="true" width="170"/>
+		<GridImage name="thumbnailImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" sortable="false" text="${catalogResources.productThumbnail_ColumnHeader}" visible="true"/>
+		<GridText name="thumbnail" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" text="${catalogResources.productThumbnailPath_ColumnHeader}" visible="false" width="200"/>
+		<GridImage name="fullimageImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" sortable="false" text="${catalogResources.productFullImage_ColumnHeader}" visible="false"/>
+		<GridText name="fullimage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" text="${catalogResources.productFullImagePath_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="sDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="sDesc" text="${catalogResources.productShortDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridRichText name="lDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="lDesc" text="${catalogResources.productLongDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridDisplayName name="identifier" parentObject="true" text="${catalogResources.parentCategoryPrompt}" visible="false" width="200"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!-- <GridRichText name="xdesc_auxDescription1"
+			objectPath="CatalogEntry/CatalogEntryDescription"
+			propertyName="xdesc_auxDescription1"
+			text="${catalogResources.productAux1_ColumnHeader}"
+			visible="true" width="200"/> -->
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!-- <GridRichText name="xdesc_auxDescription2"
+			objectPath="CatalogEntry/CatalogEntryDescription"
+			propertyName="xdesc_auxDescription2"
+			text="${catalogResources.productAux2_ColumnHeader}"
+			visible="true" width="200"/> -->
+		<GridCheckbox alignment="center" falseValue="0" name="xdesc_published" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_published" text="${catalogResources.productPublished_ColumnHeader}" trueValue="1" visible="true" width="140"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_buyable" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_buyable" text="${catalogResources.productBuyable_ColumnHeader}" trueValue="1" visible="true" width="90"/>
+		<GridCheckbox alignment="center" falseValue="1" name="xprop_state" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_state" text="${catalogResources.productHide_ColumnHeader}" trueValue="0" visible="true" width="90"/>
+		<GridText name="xprop_manufacturerPartNumber" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturerPartNumber" text="${catalogResources.productManufacturerPartNumber_ColumnHeader}" visible="true" width="200"/>
+		<GridText name="xprop_manufacturer" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturer" text="${catalogResources.productmanufacturer_ColumnHeader}" visible="true" width="200"/>
+		<GridText name="xprop_url" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_url" text="${catalogResources.urlPrompt}" visible="false" width="254"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field1" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field1" text="${catalogResources.productField1_ColumnHeader}" visible="false" width="120"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field2" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field2" text="${catalogResources.productField2_ColumnHeader}" visible="false" width="120"/>
+		<GridNumeric name="xprop_field3" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field3" text="${catalogResources.productField3_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field4" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field4" text="${catalogResources.productField4_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field5" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field5" text="${catalogResources.productField5_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="keyword" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="keyword" text="${catalogResources.productKeyword_ColumnHeader}" visible="false" width="90"/>
+		<GridCurrency alignment="right" cloneEnabled="false" editable="true" name="listprice" objectPath="CatalogEntry/CatalogEntryListPrice" text="${catalogResources.productPrice_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="false" name="defaultCurrencyCode" objectPath="CatalogEntry/CatalogEntryListPrice" propertyName="defaultCurrencyCode" text="${catalogResources.productCurrency_ColumnHeader}" visible="false" width="85"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_onSpecial" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_onSpecial" text="${catalogResources.productOnSpecial_ColumnHeader}" trueValue="1" visible="false" width="100"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!-- <GridCheckbox  trueValue="1" falseValue="0"
+			name="xprop_onAuction"
+			objectPath="CatalogEntry/CatalogEntryExtraProperties"
+			propertyName="xprop_onAuction"
+			text="${catalogResources.productOnAuction_ColumnHeader}"
+			visible="true" width="100" alignment="center"/> -->
+		<!--  <GridDate name="announcementdate" objectPath="CatalogEntry/CatalogEntryExtraProperties"  propertyName="xprop_startDate" editable="true" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="true" width="110"/>  -->
+		<GridDate name="xprop_startDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_startDate" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="150"/>
+		<GridDate name="xprop_endDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_endDate" text="${catalogResources.productWithdrawalDate_ColumnHeader}" visible="false"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!-- <GridDate name="xprop_availabilityDate"
+			objectPath="CatalogEntry/CatalogEntryExtraProperties"
+			propertyName="xprop_availabilityDate"
+			text="${catalogResources.productAvailabilityDate_ColumnHeader}"
+			visible="true" width="130"/>
+			<GridDate name="xprop_lastOrderDate"
+			objectPath="CatalogEntry/CatalogEntryExtraProperties"
+			propertyName="xprop_lastOrderDate"
+			text="${catalogResources.productLastOrderDate_ColumnHeader}"
+			visible="true" width="130"/>
+			<GridDate name="xprop_endOfServiceDate"
+			objectPath="CatalogEntry/CatalogEntryExtraProperties"
+			propertyName="xprop_endOfServiceDate"
+			text="${catalogResources.productEndOfServiceDate_ColumnHeader}"
+			visible="true" width="150"/>
+			<GridDate name="xprop_discontinueDate"
+			objectPath="CatalogEntry/CatalogEntryExtraProperties"
+			propertyName="xprop_discontinueDate"
+			text="${catalogResources.productDiscontinuedDate_ColumnHeader}"
+			visible="true" width="140"/>
+			<GridText name="url" objectPath="CatalogEntry"
+			propertyName="url"
+			text="${catalogResources.productURL_ColumnHeader}"
+			visible="true" width="90"/> -->
+	</ObjectGrid>
+
+	<!---
+		This definition displays the contents and characteristics of a list of the following objects: {@link Product},{@link Kit}, {@link Bundle},
+		{@link ProductSKU} and {@link CatalogGroupSKU}.
+	-->
+	<ObjectGrid definitionName="cmc/catalog/CatalogEntrySearchGrid" preferenceKey="catCatalogEntrySearchGrid">
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+		<GridText editable="false" name="catentryId" propertyName="catentryId" text="${catalogResources.productUniqueId_ColumnHeader}" visible="false" width="90"/>
+		<GridIconTypeImage name="typeIcon" propertyName="null" required="true" text="${catalogResources.productType_ColumnHeader}" visible="true" width="60"/>
+		<GridStoreName name="store"/>
+		<GridText editable="false" name="ownerId" propertyName="ownerId" text="${catalogResources.productOwnerId_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="true" name="partnumber" propertyName="partnumber" required="true" text="${catalogResources.productPartnumber_ColumnHeader}" visible="true" width="90"/>
+		<GridText name="catalogEntryName" objectPath="CatalogEntryDescription" propertyName="name" text="${catalogResources.productName_ColumnHeader}" visible="true" width="170"/>
+		<GridImage name="thumbnailImage" objectPath="CatalogEntryDescription" propertyName="tImage" sortable="false" text="${catalogResources.productThumbnail_ColumnHeader}" visible="true"/>
+		<GridText name="thumbnail" objectPath="CatalogEntryDescription" propertyName="tImage" text="${catalogResources.productThumbnailPath_ColumnHeader}" visible="false" width="200"/>
+		<GridImage name="fullimageImage" objectPath="CatalogEntryDescription" propertyName="fImage" sortable="false" text="${catalogResources.productFullImage_ColumnHeader}" visible="false"/>
+		<GridText name="fullimage" objectPath="CatalogEntryDescription" propertyName="fImage" text="${catalogResources.productFullImagePath_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="sDesc" objectPath="CatalogEntryDescription" propertyName="sDesc" text="${catalogResources.productShortDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridRichText name="lDesc" objectPath="CatalogEntryDescription" propertyName="lDesc" text="${catalogResources.productLongDesc_ColumnHeader}" visible="false" width="200"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!-- <GridRichText name="xdesc_auxDescription1"
+			objectPath="CatalogEntryDescription"
+			propertyName="xdesc_auxDescription1"
+			text="${catalogResources.productAux1_ColumnHeader}"
+			visible="true" width="200"/>
+			<GridRichText name="xdesc_auxDescription2"
+			objectPath="CatalogEntryDescription"
+			propertyName="xdesc_auxDescription2"
+			text="${catalogResources.productAux2_ColumnHeader}"
+			visible="true" width="200"/> -->
+		<GridCheckbox alignment="center" falseValue="0" name="xdesc_published" objectPath="CatalogEntryDescription" propertyName="xdesc_published" text="${catalogResources.productPublished_ColumnHeader}" trueValue="1" visible="true" width="140"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_buyable" objectPath="CatalogEntryExtraProperties" propertyName="xprop_buyable" text="${catalogResources.productBuyable_ColumnHeader}" trueValue="1" visible="true" width="90"/>
+		<GridCheckbox alignment="center" falseValue="1" name="xprop_state" objectPath="CatalogEntryExtraProperties" propertyName="xprop_state" text="${catalogResources.productHide_ColumnHeader}" trueValue="0" visible="true" width="90"/>
+		<GridText name="xprop_manufacturerPartNumber" objectPath="CatalogEntryExtraProperties" propertyName="xprop_manufacturerPartNumber" text="${catalogResources.productManufacturerPartNumber_ColumnHeader}" visible="true" width="200"/>
+		<GridText name="xprop_manufacturer" objectPath="CatalogEntryExtraProperties" propertyName="xprop_manufacturer" text="${catalogResources.productmanufacturer_ColumnHeader}" visible="true" width="200"/>
+		<GridText name="keyword" objectPath="CatalogEntryDescription" propertyName="keyword" text="${catalogResources.productKeyword_ColumnHeader}" visible="false" width="90"/>
+		<GridCurrency alignment="right" cloneEnabled="false" editable="true" name="listprice" objectPath="CatalogEntryListPrice" text="${catalogResources.productPrice_ColumnHeader}" visible="false" width="80"/>
+		<GridText editable="false" name="defaultCurrencyCode" objectPath="CatalogEntryListPrice" propertyName="defaultCurrencyCode" text="${catalogResources.productCurrency_ColumnHeader}" visible="false" width="70"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_onSpecial" objectPath="CatalogEntryExtraProperties" propertyName="xprop_onSpecial" text="${catalogResources.productOnSpecial_ColumnHeader}" trueValue="1" visible="false" width="100"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!-- <GridCheckbox  trueValue="1" falseValue="0"
+			name="xprop_onAuction"
+			objectPath="CatalogEntryExtraProperties"
+			propertyName="xprop_onAuction"
+			text="${catalogResources.productOnAuction_ColumnHeader}"
+			visible="true" width="100" alignment="center"/> -->
+		<!--  <GridDate name="xprop_startDate" objectPath="CatalogEntryExtraProperties"  propertyName="xprop_startDate" editable="true" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="true" width="110"/>  -->
+		<GridDate name="xprop_startDate" objectPath="CatalogEntryExtraProperties" propertyName="xprop_startDate" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="150"/>
+		<GridDate name="xprop_endDate" objectPath="CatalogEntryExtraProperties" propertyName="xprop_endDate" text="${catalogResources.productWithdrawalDate_ColumnHeader}" visible="false"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!-- <GridDate name="xprop_availabilityDate"
+			objectPath="CatalogEntryExtraProperties"
+			propertyName="xprop_availabilityDate"
+			text="${catalogResources.productAvailabilityDate_ColumnHeader}"
+			visible="true" width="130"/>
+			<GridDate name="xprop_lastOrderDate"
+			objectPath="CatalogEntryExtraProperties"
+			propertyName="xprop_lastOrderDate"
+			text="${catalogResources.productLastOrderDate_ColumnHeader}"
+			visible="true" width="130"/>
+			<GridDate name="xprop_endOfServiceDate"
+			objectPath="CatalogEntryExtraProperties"
+			propertyName="xprop_endOfServiceDate"
+			text="${catalogResources.productEndOfServiceDate_ColumnHeader}"
+			visible="true" width="150"/>
+			<GridDate name="xprop_discontinueDate"
+			objectPath="CatalogEntryExtraProperties"
+			propertyName="xprop_discontinueDate"
+			text="${catalogResources.productDiscontinuedDate_ColumnHeader}"
+			visible="true" width="140"/>
+			<GridText name="url" propertyName="url"
+			text="${catalogResources.productURL_ColumnHeader}"
+			visible="true" width="90"/> -->
+	</ObjectGrid>
+
+	<!---
+		This definition displays the identification characteristics of a list of the following objects: {@link Product},{@link Kit}, {@link Bundle},
+		{@link ProductSKU} and {@link CatalogGroupSKU}.  It is used in the utilities pane search tab.
+	-->
+	<ObjectGrid definitionName="cmc/catalog/CatalogEntryUtilitiesSearchGrid" preferenceKey="catCatalogEntryUtilitiesSearchGrid">
+		<dependency localName="foundationResources" moduleName="cmc/foundation/FoundationResources"/>
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+		<GridIconTypeImage name="typeIcon" propertyName="null" required="true" text="${foundationResources.utilitiesGrid_type}" width="100"/>
+		<GridDisplayName name="displayName" propertyName="null" showLongDisplayName="true" text="${catalogResources.UtilityPaneHeaderText}" width="170"/>
+		<GridText name="catalogEntryName" objectPath="CatalogEntryDescription" propertyName="name" text="${catalogResources.productName_ColumnHeader}" visible="false" width="170"/>
+		<GridText name="sDesc" objectPath="CatalogEntryDescription" propertyName="sDesc" text="${catalogResources.productShortDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridImage name="thumbnailImage" objectPath="CatalogEntryDescription" propertyName="tImage" sortable="false" text="${catalogResources.productThumbnail_ColumnHeader}" visible="false"/>
+		<GridText name="xprop_manufacturerPartNumber" objectPath="CatalogEntryExtraProperties" propertyName="xprop_manufacturerPartNumber" text="${catalogResources.productManufacturerPartNumber_ColumnHeader}" visible="true" width="200"/>
+		<GridText name="xprop_manufacturer" objectPath="CatalogEntryExtraProperties" propertyName="xprop_manufacturer" text="${catalogResources.productmanufacturer_ColumnHeader}" visible="true" width="200"/>
+	</ObjectGrid>
+    <!---
+		<p/>
+		This definition is used to display the SKUs for a selected variant.
+		<p/>
+		This grid is dynamic and contains columns representing the attributes
+		and allowed attriubute values from the parent variant.  Each defining attribute
+		from the parent variant represents a column that is appended to the table
+		and allows the selection of an attribute value for a SKU defining attribute.
+		<p/>
+		The SKU defining attribute definition is defined in objectDefinitions/SKUPrimaryObjectDefinition.xml.
+		<p/>
+		The extended class cmc/catalog/SKUDefiningAttributeColumnGrid is not customizable.
+		<p/>
+		<b>Note:<b><br>
+		This list view displays reference objects of type  {@link cmc/catalog/ChildVariantSKU}.
+		To display properties of the reference object, no <code>objectPath</code> attribute is required for the widget.
+		To display properties of the object that is being referred to, specify an <code>objectPath</code> and ensure that the path starts with <code>CatalogEntry</code>
+		which is an objectGroups property shared by objects of type {@link Variant},{@link Kit}, {@link Bundle},
+		{@link ProductSKU} and {@link CatalogGroupSKU}.
+		<p/>
+	-->
+     <SKUDefiningAttributeColumnGrid definitionName="cmc/catalog/VariantChildSKUGrid" package="cmc/catalog">
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+ 		<GridText editable="false" name="catentryId" objectPath="CatalogEntry" propertyName="catentryId" text="${catalogResources.productUniqueId_ColumnHeader}" visible="false" width="90"/>
+		<GridIconTypeImage name="typeIcon" propertyName="null" required="true" text="${catalogResources.productType_ColumnHeader}" visible="true" width="60"/>
+		<GridStoreName name="store" objectPath="CatalogEntry"/>
+		<GridText editable="false" name="ownerId" objectPath="CatalogEntry" propertyName="ownerId" text="${catalogResources.productOwnerId_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="true" name="partnumber" objectPath="CatalogEntry" propertyName="partnumber" required="true" text="${catalogResources.productPartnumber_ColumnHeader}" visible="true" width="140"/>
+		<GridText editable="true" name="catalogEntryName" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="name" text="${catalogResources.productName_ColumnHeader}" visible="true" width="180"/>
+		<GridImage name="thumbnailImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" sortable="false" text="${catalogResources.productThumbnail_ColumnHeader}" visible="true"/>
+		<GridText name="thumbnail" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" text="${catalogResources.productThumbnailPath_ColumnHeader}" visible="false" width="200"/>
+		<GridImage name="fullimageImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" sortable="false" text="${catalogResources.productFullImage_ColumnHeader}" visible="false"/>
+		<GridText name="fullimage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" text="${catalogResources.productFullImagePath_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="sDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="sDesc" text="${catalogResources.productShortDesc_ColumnHeader}" visible="true" width="200"/>
+		<GridRichText name="lDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="lDesc" text="${catalogResources.productLongDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridDisplayName name="parentProductName" parentObject="true" text="${catalogResources.parentCategoryPrompt}" visible="false" width="200"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridRichText name="xdesc_auxDescription1" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_auxDescription1" text="${catalogResources.productAux1_ColumnHeader}" visible="true" width="200"/>
+			<GridRichText name="xdesc_auxDescription2" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_auxDescription2" text="${catalogResources.productAux2_ColumnHeader}" visible="true" width="200"/>
+		-->
+		<GridCheckbox alignment="center" falseValue="0" name="xdesc_published" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_published" text="${catalogResources.productPublished_ColumnHeader}" trueValue="1" visible="true" width="140"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_buyable" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_buyable" text="${catalogResources.productBuyable_ColumnHeader}" trueValue="1" visible="true" width="90"/>
+		<GridText name="xprop_manufacturerPartNumber" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturerPartNumber" text="${catalogResources.productManufacturerPartNumber_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_manufacturer" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturer" text="${catalogResources.productmanufacturer_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_url" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_url" text="${catalogResources.urlPrompt}" visible="false" width="254"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field1" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field1" text="${catalogResources.productField1_ColumnHeader}" visible="false" width="120"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field2" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field2" text="${catalogResources.productField2_ColumnHeader}" visible="false" width="120"/>
+		<GridNumeric name="xprop_field3" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field3" text="${catalogResources.productField3_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field4" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field4" text="${catalogResources.productField4_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field5" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field5" text="${catalogResources.productField5_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="keyword" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="keyword" text="${catalogResources.productKeyword_ColumnHeader}" visible="false" width="90"/>
+		<GridCurrency alignment="right" cloneEnabled="false" editable="true" name="listprice" objectPath="CatalogEntry/CatalogEntryListPrice" text="${catalogResources.productPrice_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="false" name="defaultCurrencyCode" objectPath="CatalogEntry/CatalogEntryListPrice" propertyName="defaultCurrencyCode" text="${catalogResources.productCurrency_ColumnHeader}" visible="false" width="85"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_onSpecial" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_onSpecial" text="${catalogResources.productOnSpecial_ColumnHeader}" trueValue="1" visible="false" width="100"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridCheckbox  trueValue="1" falseValue="0"
+			name="xprop_onAuction"
+			objectPath="CatalogEntry/CatalogEntryExtraProperties"
+			propertyName="xprop_onAuction"
+			text="${catalogResources.productOnAuction_ColumnHeader}"
+			visible="true" width="100" alignment="center"/>
+		-->
+		<!--  <GridDate name="xprop_startDate" objectPath="CatalogEntry/CatalogEntryExtraProperties"  propertyName="xprop_startDate" editable="true" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="110"/>  -->
+		<GridDate name="xprop_startDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_startDate" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="150"/>
+		<GridDate name="xprop_endDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_endDate" text="${catalogResources.productWithdrawalDate_ColumnHeader}" visible="false"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridDate name="xprop_availabilityDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_availabilityDate" text="${catalogResources.productAvailabilityDate_ColumnHeader}" visible="true"/>
+			<GridDate name="xprop_lastOrderDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_lastOrderDate" text="${catalogResources.productLastOrderDate_ColumnHeader}" visible="true"/>
+			<GridDate name="xprop_endOfServiceDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_endOfServiceDate" text="${catalogResources.productEndOfServiceDate_ColumnHeader}" visible="true" width="150"/>
+			<GridDate name="xprop_discontinueDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_discontinueDate" text="${catalogResources.productDiscontinuedDate_ColumnHeader}" visible="true" width="140"/>
+			<GridText name="url" objectPath="CatalogEntry" propertyName="url" text="${catalogResources.productURL_ColumnHeader}" visible="true" width="90"/>
+		-->
+	</SKUDefiningAttributeColumnGrid>
+
+	<!---
+		<p/>
+		This definition is used to display the SKUs for a selected product.
+		<p/>
+		This grid is dynamic and contains columns representing the attributes
+		and allowed attriubute values from the parent product.  Each defining attribute
+		from the parent product represents a column that is appended to the table
+		and allows the selection of an attribute value for a SKU defining attribute.
+		<p/>
+		The SKU defining attribute definition is defined in objectDefinitions/SKUPrimaryObjectDefinition.xml.
+		<p/>
+		The extended class cmc/catalog/SKUDefiningAttributeColumnGrid is not customizable.
+		<p/>
+		<b>Note:<b><br>
+		This list view displays reference objects of type  {@link cmc/catalog/ChildProductSKU}.
+		To display properties of the reference object, no <code>objectPath</code> attribute is required for the widget.
+		To display properties of the object that is being referred to, specify an <code>objectPath</code> and ensure that the path starts with <code>CatalogEntry</code>
+		which is an objectGroups property shared by objects of type {@link Product},{@link Kit}, {@link Bundle},
+		{@link ProductSKU} and {@link CatalogGroupSKU}.
+		<p/>
+	-->
+	<SKUDefiningAttributeColumnGrid definitionName="cmc/catalog/ProductChildSKUGrid" package="cmc/catalog">
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+		<GridNumeric editable="true" name="sequence" numDecimalPlaces="1" propertyName="sequence" required="false" text="${catalogResources.displaySequence}" visible="true" width="130"/>
+		<GridText editable="false" name="catentryId" objectPath="CatalogEntry" propertyName="catentryId" text="${catalogResources.productUniqueId_ColumnHeader}" visible="false" width="90"/>
+		<GridIconTypeImage name="typeIcon" propertyName="null" required="true" text="${catalogResources.productType_ColumnHeader}" visible="true" width="60"/>
+		<GridStoreName name="store" objectPath="CatalogEntry"/>
+		<GridText editable="false" name="ownerId" objectPath="CatalogEntry" propertyName="ownerId" text="${catalogResources.productOwnerId_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="true" name="partnumber" objectPath="CatalogEntry" propertyName="partnumber" required="true" text="${catalogResources.productPartnumber_ColumnHeader}" visible="true" width="90"/>
+		<GridText editable="true" name="catalogEntryName" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="name" text="${catalogResources.productName_ColumnHeader}" visible="true" width="150"/>
+		<GridImage name="thumbnailImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" sortable="false" text="${catalogResources.productThumbnail_ColumnHeader}" visible="true"/>
+		<GridText name="thumbnail" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" text="${catalogResources.productThumbnailPath_ColumnHeader}" visible="false" width="200"/>
+		<GridImage name="fullimageImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" sortable="false" text="${catalogResources.productFullImage_ColumnHeader}" visible="false"/>
+		<GridText name="fullimage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" text="${catalogResources.productFullImagePath_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="sDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="sDesc" text="${catalogResources.productShortDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridRichText name="lDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="lDesc" text="${catalogResources.productLongDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridDisplayName name="parentProductName" parentObject="true" text="${catalogResources.parentCategoryPrompt}" visible="false" width="200"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridRichText name="xdesc_auxDescription1" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_auxDescription1" text="${catalogResources.productAux1_ColumnHeader}" visible="true" width="200"/>
+			<GridRichText name="xdesc_auxDescription2" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_auxDescription2" text="${catalogResources.productAux2_ColumnHeader}" visible="true" width="200"/>
+		-->
+		<GridCheckbox alignment="center" falseValue="0" name="xdesc_published" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_published" text="${catalogResources.productPublished_ColumnHeader}" trueValue="1" visible="true" width="140"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_buyable" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_buyable" text="${catalogResources.productBuyable_ColumnHeader}" trueValue="1" visible="true" width="90"/>
+		<GridText name="xprop_manufacturerPartNumber" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturerPartNumber" text="${catalogResources.productManufacturerPartNumber_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_manufacturer" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturer" text="${catalogResources.productmanufacturer_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_url" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_url" text="${catalogResources.urlPrompt}" visible="false" width="254"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field1" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field1" text="${catalogResources.productField1_ColumnHeader}" visible="false" width="120"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field2" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field2" text="${catalogResources.productField2_ColumnHeader}" visible="false" width="120"/>
+		<GridNumeric name="xprop_field3" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field3" text="${catalogResources.productField3_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field4" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field4" text="${catalogResources.productField4_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field5" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field5" text="${catalogResources.productField5_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="keyword" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="keyword" text="${catalogResources.productKeyword_ColumnHeader}" visible="false" width="90"/>
+		<GridCurrency alignment="right" cloneEnabled="false" editable="true" name="listprice" objectPath="CatalogEntry/CatalogEntryListPrice" text="${catalogResources.productPrice_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="false" name="defaultCurrencyCode" objectPath="CatalogEntry/CatalogEntryListPrice" propertyName="defaultCurrencyCode" text="${catalogResources.productCurrency_ColumnHeader}" visible="false" width="85"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_onSpecial" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_onSpecial" text="${catalogResources.productOnSpecial_ColumnHeader}" trueValue="1" visible="false" width="100"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridCheckbox  trueValue="1" falseValue="0"
+			name="xprop_onAuction"
+			objectPath="CatalogEntry/CatalogEntryExtraProperties"
+			propertyName="xprop_onAuction"
+			text="${catalogResources.productOnAuction_ColumnHeader}"
+			visible="true" width="100" alignment="center"/>
+		-->
+		<!--  <GridDate name="xprop_startDate" objectPath="CatalogEntry/CatalogEntryExtraProperties"  propertyName="xprop_startDate" editable="true" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="110"/>  -->
+		<GridDate name="xprop_startDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_startDate" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="150"/>
+		<GridDate name="xprop_endDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_endDate" text="${catalogResources.productWithdrawalDate_ColumnHeader}" visible="false"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridDate name="xprop_availabilityDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_availabilityDate" text="${catalogResources.productAvailabilityDate_ColumnHeader}" visible="true"/>
+			<GridDate name="xprop_lastOrderDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_lastOrderDate" text="${catalogResources.productLastOrderDate_ColumnHeader}" visible="true"/>
+			<GridDate name="xprop_endOfServiceDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_endOfServiceDate" text="${catalogResources.productEndOfServiceDate_ColumnHeader}" visible="true" width="150"/>
+			<GridDate name="xprop_discontinueDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_discontinueDate" text="${catalogResources.productDiscontinuedDate_ColumnHeader}" visible="true" width="140"/>
+			<GridText name="url" objectPath="CatalogEntry" propertyName="url" text="${catalogResources.productURL_ColumnHeader}" visible="true" width="90"/>
+		-->
+	</SKUDefiningAttributeColumnGrid>
+	
+	<VariantDefiningAttributeColumnGrid definitionName="cmc/catalog/ProductChildVariantGrid" package="cmc/catalog">
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+		<GridNumeric editable="true" name="sequence" numDecimalPlaces="1" propertyName="sequence" required="false" text="${catalogResources.displaySequence}" visible="true" width="130"/>
+		<GridText editable="false" name="catentryId" objectPath="CatalogEntry" propertyName="catentryId" text="${catalogResources.productUniqueId_ColumnHeader}" visible="false" width="90"/>
+		<GridIconTypeImage name="typeIcon" propertyName="null" required="true" text="${catalogResources.productType_ColumnHeader}" visible="true" width="60"/>
+		<GridStoreName name="store" objectPath="CatalogEntry"/>
+		<GridText editable="false" name="ownerId" objectPath="CatalogEntry" propertyName="ownerId" text="${catalogResources.productOwnerId_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="true" name="partnumber" objectPath="CatalogEntry" propertyName="partnumber" required="true" text="${catalogResources.productPartnumber_ColumnHeader}" visible="true" width="140"/>
+		<GridText editable="true" name="catalogEntryName" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="name" text="${catalogResources.productName_ColumnHeader}" visible="true" width="180"/>
+		<GridImage name="thumbnailImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" sortable="false" text="${catalogResources.productThumbnail_ColumnHeader}" visible="false"/>
+		<GridText name="thumbnail" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" text="${catalogResources.productThumbnailPath_ColumnHeader}" visible="false" width="200"/>
+		<GridImage name="fullimageImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" sortable="false" text="${catalogResources.productFullImage_ColumnHeader}" visible="false"/>
+		<GridText name="fullimage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" text="${catalogResources.productFullImagePath_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="sDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="sDesc" text="${catalogResources.productShortDesc_ColumnHeader}" visible="true" width="200"/>
+		<GridRichText name="lDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="lDesc" text="${catalogResources.productLongDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridDisplayName name="parentProductName" parentObject="true" text="${catalogResources.parentCategoryPrompt}" visible="false" width="200"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridRichText name="xdesc_auxDescription1" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_auxDescription1" text="${catalogResources.productAux1_ColumnHeader}" visible="true" width="200"/>
+			<GridRichText name="xdesc_auxDescription2" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_auxDescription2" text="${catalogResources.productAux2_ColumnHeader}" visible="true" width="200"/>
+		-->
+		<GridCheckbox alignment="center" falseValue="0" name="xdesc_published" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_published" text="${catalogResources.productPublished_ColumnHeader}" trueValue="1" visible="false" width="140"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_buyable" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_buyable" text="${catalogResources.productBuyable_ColumnHeader}" trueValue="0" visible="false" width="90"/>
+		<GridCheckbox alignment="center" falseValue="1" name="xprop_state" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_state" text="${catalogResources.productHide_ColumnHeader}" trueValue="0" visible="true" width="90"/>
+		<GridText name="xprop_manufacturerPartNumber" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturerPartNumber" text="${catalogResources.productManufacturerPartNumber_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_manufacturer" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturer" text="${catalogResources.productmanufacturer_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_url" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_url" text="${catalogResources.urlPrompt}" visible="false" width="254"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field1" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field1" text="${catalogResources.productField1_ColumnHeader}" visible="false" width="120"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field2" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field2" text="${catalogResources.productField2_ColumnHeader}" visible="false" width="120"/>
+		<GridNumeric name="xprop_field3" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field3" text="${catalogResources.productField3_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field4" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field4" text="${catalogResources.productField4_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field5" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field5" text="${catalogResources.productField5_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="keyword" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="keyword" text="${catalogResources.productKeyword_ColumnHeader}" visible="false" width="90"/>
+		<GridCurrency alignment="right" cloneEnabled="false" editable="true" name="listprice" objectPath="CatalogEntry/CatalogEntryListPrice" text="${catalogResources.productPrice_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="false" name="defaultCurrencyCode" objectPath="CatalogEntry/CatalogEntryListPrice" propertyName="defaultCurrencyCode" text="${catalogResources.productCurrency_ColumnHeader}" visible="false" width="85"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_onSpecial" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_onSpecial" text="${catalogResources.productOnSpecial_ColumnHeader}" trueValue="1" visible="false" width="100"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridCheckbox  trueValue="1" falseValue="0"
+			name="xprop_onAuction"
+			objectPath="CatalogEntry/CatalogEntryExtraProperties"
+			propertyName="xprop_onAuction"
+			text="${catalogResources.productOnAuction_ColumnHeader}"
+			visible="true" width="100" alignment="center"/>
+		-->
+		<!--  <GridDate name="xprop_startDate" objectPath="CatalogEntry/CatalogEntryExtraProperties"  propertyName="xprop_startDate" editable="true" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="110"/>  -->
+		<GridDate name="xprop_startDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_startDate" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="150"/>
+		<GridDate name="xprop_endDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_endDate" text="${catalogResources.productWithdrawalDate_ColumnHeader}" visible="false"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridDate name="xprop_availabilityDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_availabilityDate" text="${catalogResources.productAvailabilityDate_ColumnHeader}" visible="true"/>
+			<GridDate name="xprop_lastOrderDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_lastOrderDate" text="${catalogResources.productLastOrderDate_ColumnHeader}" visible="true"/>
+			<GridDate name="xprop_endOfServiceDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_endOfServiceDate" text="${catalogResources.productEndOfServiceDate_ColumnHeader}" visible="true" width="150"/>
+			<GridDate name="xprop_discontinueDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_discontinueDate" text="${catalogResources.productDiscontinuedDate_ColumnHeader}" visible="true" width="140"/>
+			<GridText name="url" objectPath="CatalogEntry" propertyName="url" text="${catalogResources.productURL_ColumnHeader}" visible="true" width="90"/>
+		-->
+	</VariantDefiningAttributeColumnGrid>
+
+	<!-- This grid shows the PDK attributes in the PDK list view -->
+	<ObjectGrid definitionName="cmc/catalog/DynamicKitChildPDKGrid" preferenceKey="catDynamicKitChildPDKGrid">
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+		<GridNumeric editable="true" name="sequence" numDecimalPlaces="1" propertyName="sequence" required="false" text="${catalogResources.displaySequence}" visible="true" width="130"/>
+		<GridText editable="false" name="catentryId" objectPath="CatalogEntry" propertyName="catentryId" text="${catalogResources.productUniqueId_ColumnHeader}" visible="false" width="90"/>
+		<GridIconTypeImage name="typeIcon" required="true" text="${catalogResources.productType_ColumnHeader}" visible="true" width="60"/>
+		<GridStoreName name="store" objectPath="CatalogEntry"/>
+		<GridText editable="false" name="ownerId" objectPath="CatalogEntry" propertyName="ownerId" text="${catalogResources.productOwnerId_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="true" name="partnumber" objectPath="CatalogEntry" propertyName="partnumber" required="true" text="${catalogResources.productPartnumber_ColumnHeader}" visible="true" width="90"/>
+		<GridText editable="true" name="catalogEntryName" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="name" text="${catalogResources.productName_ColumnHeader}" visible="true" width="150"/>
+		<GridImage name="thumbnailImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" sortable="false" text="${catalogResources.productThumbnail_ColumnHeader}" visible="true"/>
+		<GridText name="thumbnail" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" text="${catalogResources.productThumbnailPath_ColumnHeader}" visible="false" width="200"/>
+		<GridImage name="fullimageImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" sortable="false" text="${catalogResources.productFullImage_ColumnHeader}" visible="false"/>
+		<GridText name="fullimage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" text="${catalogResources.productFullImagePath_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="sDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="sDesc" text="${catalogResources.productShortDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridRichText name="lDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="lDesc" text="${catalogResources.productLongDesc_ColumnHeader}" visible="false" width="200"/>
+		<GridDisplayName name="parentProductName" parentObject="true" text="${catalogResources.parentCategoryPrompt}" visible="false" width="200"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridRichText name="xdesc_auxDescription1" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_auxDescription1" text="${catalogResources.productAux1_ColumnHeader}" visible="true" width="200"/>
+			<GridRichText name="xdesc_auxDescription2" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_auxDescription2" text="${catalogResources.productAux2_ColumnHeader}" visible="true" width="200"/>
+		-->
+		<GridCheckbox alignment="center" falseValue="0" name="xdesc_published" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_published" text="${catalogResources.productPublished_ColumnHeader}" trueValue="1" visible="true" width="140"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_buyable" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_buyable" text="${catalogResources.productBuyable_ColumnHeader}" trueValue="1" visible="true" width="90"/>
+		<GridText name="xprop_manufacturerPartNumber" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturerPartNumber" text="${catalogResources.productManufacturerPartNumber_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_manufacturer" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturer" text="${catalogResources.productmanufacturer_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_url" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_url" text="${catalogResources.urlPrompt}" visible="false" width="254"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field1" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field1" text="${catalogResources.productField1_ColumnHeader}" visible="false" width="120"/>
+		<GridStepper maximumValue="2147483647" minimumValue="-2147483648" name="xprop_field2" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field2" text="${catalogResources.productField2_ColumnHeader}" visible="false" width="120"/>
+		<GridNumeric name="xprop_field3" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field3" text="${catalogResources.productField3_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field4" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field4" text="${catalogResources.productField4_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_field5" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_field5" text="${catalogResources.productField5_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="keyword" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="keyword" text="${catalogResources.productKeyword_ColumnHeader}" visible="false" width="90"/>
+		<GridCurrency alignment="right" cloneEnabled="false" editable="true" name="listprice" objectPath="CatalogEntry/CatalogEntryListPrice" text="${catalogResources.productPrice_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="false" name="defaultCurrencyCode" objectPath="CatalogEntry/CatalogEntryListPrice" propertyName="defaultCurrencyCode" text="${catalogResources.productCurrency_ColumnHeader}" visible="false" width="85"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_onSpecial" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_onSpecial" text="${catalogResources.productOnSpecial_ColumnHeader}" trueValue="1" visible="false" width="100"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridCheckbox  trueValue="1" falseValue="0"
+			name="xprop_onAuction"
+			objectPath="CatalogEntry/CatalogEntryExtraProperties"
+			propertyName="xprop_onAuction"
+			text="${catalogResources.productOnAuction_ColumnHeader}"
+			visible="true" width="100" alignment="center"/>
+		-->
+		<GridDate name="xprop_startDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_startDate" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="150"/>
+		<GridDate name="xprop_endDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_endDate" text="${catalogResources.productWithdrawalDate_ColumnHeader}" visible="false"/>
+		<!-- This tag is disabled by default. To enable it, uncomment the tag below -->
+		<!--
+			<GridDate name="xprop_availabilityDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_availabilityDate" text="${catalogResources.productAvailabilityDate_ColumnHeader}" visible="true"/>
+			<GridDate name="xprop_lastOrderDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_lastOrderDate" text="${catalogResources.productLastOrderDate_ColumnHeader}" visible="true"/>
+			<GridDate name="xprop_endOfServiceDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_endOfServiceDate" text="${catalogResources.productEndOfServiceDate_ColumnHeader}" visible="true" width="150"/>
+			<GridDate name="xprop_discontinueDate" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_discontinueDate" text="${catalogResources.productDiscontinuedDate_ColumnHeader}" visible="true" width="140"/>
+			<GridText name="url" objectPath="CatalogEntry" propertyName="url" text="${catalogResources.productURL_ColumnHeader}" visible="true" width="90"/>
+		-->
+	</ObjectGrid>
+
+	<!---
+		This navigation list definition is used to display the following objects: {@link cmc/catalog/ProductPrimaryObjectDefinition}, {@link cmc/catalog/BundlePrimaryObjectDefinition}, {@link cmc/catalog/KitPrimaryObjectDefinition}
+		and {@link cmc/catalog/ProductSKUPrimaryObjectDefinition}.
+	-->
+	<NavigationListDefinition definitionName="cmc/catalog/UnassignedCatalogEntriesNavigationList" displayName="${catalogResources.unassignedCatalogEntries}" helpLink="tasks/tpnascatent.html" isDefault="true" listDefinition="cmc/catalog/UnassignedCatalogEntryChildList" listTitle="${catalogResources.catalogEntriesList}" toolbarIcon="listToolbarIcon">
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+	</NavigationListDefinition>
+	
+	<ObjectGrid definitionName="cmc/catalog/SKUListGrid" preferenceKey="catSKUListGrid">
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+		<GridText editable="false" name="catentryId" objectPath="CatalogEntry" propertyName="catentryId" text="${catalogResources.productUniqueId_ColumnHeader}" visible="false"/>
+		<GridIconTypeImage name="typeIcon" propertyName="null" objectPath="CatalogEntry" required="true" text="${catalogResources.productType_ColumnHeader}" visible="true" width="60"/>
+		<GridStoreName name="store" objectPath="CatalogEntry"/>
+		<GridText editable="false" name="partnumber" objectPath="CatalogEntry" propertyName="partnumber" required="true" text="${catalogResources.productPartnumber_ColumnHeader}" width="120"/>
+		<GridText name="catalogEntryName" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="name" text="${catalogResources.productName_ColumnHeader}" visible="true" width="150"/>
+		<GridImage name="thumbnailImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="tImage" sortable="false" text="${catalogResources.productThumbnail_ColumnHeader}" visible="true"/>
+		<GridImage name="fullimageImage" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="fImage" sortable="false" text="${catalogResources.productFullImage_ColumnHeader}" visible="false"/>
+		<GridText name="sDesc" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="sDesc" text="${catalogResources.productShortDesc_ColumnHeader}" visible="true" width="200"/>
+	</ObjectGrid>
+	
+	<ObjectGrid definitionName="cmc/catalog/CatalogEntryVariantSearchGrid" preferenceKey="catCatalogEntryVariantSearchGrid">
+		<dependency localName="catalogResources" moduleName="cmc/catalog/CatalogResources"/>
+		<GridText editable="false" name="catentryId" propertyName="catentryId" text="${catalogResources.productUniqueId_ColumnHeader}" visible="false" width="90"/>
+		<GridIconTypeImage name="typeIcon" propertyName="null" required="true" text="${catalogResources.productType_ColumnHeader}" visible="true" width="60"/>
+		<GridStoreName name="store"/>
+		<GridText editable="false" name="ownerId" propertyName="ownerId" text="${catalogResources.productOwnerId_ColumnHeader}" visible="false" width="90"/>
+		<GridText editable="true" name="partnumber" propertyName="partnumber" required="true" text="${catalogResources.productPartnumber_ColumnHeader}" visible="true" width="150"/>
+		<GridText name="catalogEntryName" objectPath="CatalogEntryDescription" propertyName="name" text="${catalogResources.productName_ColumnHeader}" visible="true" width="170"/>
+		<GridImage name="thumbnailImage" objectPath="CatalogEntryDescription" propertyName="tImage" sortable="false" text="${catalogResources.productThumbnail_ColumnHeader}" visible="true"/>
+		<GridText name="thumbnail" objectPath="CatalogEntryDescription" propertyName="tImage" text="${catalogResources.productThumbnailPath_ColumnHeader}" visible="false" width="200"/>
+		<GridImage name="fullimageImage" objectPath="CatalogEntryDescription" propertyName="fImage" sortable="false" text="${catalogResources.productFullImage_ColumnHeader}" visible="false"/>
+		<GridText name="fullimage" objectPath="CatalogEntryDescription" propertyName="fImage" text="${catalogResources.productFullImagePath_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="sDesc" objectPath="CatalogEntryDescription" propertyName="sDesc" text="${catalogResources.productShortDesc_ColumnHeader}" visible="true" width="220"/>
+		<GridRichText name="lDesc" objectPath="CatalogEntryDescription" propertyName="lDesc" text="${catalogResources.productLongDesc_ColumnHeader}" visible="false" width="200"/>
+		
+		<GridCheckbox alignment="center" falseValue="0" name="xdesc_published" objectPath="CatalogEntryDescription" propertyName="xdesc_published" text="${catalogResources.productPublished_ColumnHeader}" trueValue="1" visible="true" width="140"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_buyable" objectPath="CatalogEntryExtraProperties" propertyName="xprop_buyable" text="${catalogResources.productBuyable_ColumnHeader}" trueValue="1" visible="true" width="90"/>
+		<GridCheckbox alignment="center" falseValue="1" name="xprop_state" objectPath="CatalogEntryExtraProperties" propertyName="xprop_state" text="${catalogResources.productHide_ColumnHeader}" trueValue="0" visible="true" width="90"/>
+		<GridText name="xprop_manufacturerPartNumber" objectPath="CatalogEntryExtraProperties" propertyName="xprop_manufacturerPartNumber" text="${catalogResources.productManufacturerPartNumber_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="xprop_manufacturer" objectPath="CatalogEntryExtraProperties" propertyName="xprop_manufacturer" text="${catalogResources.productmanufacturer_ColumnHeader}" visible="false" width="200"/>
+		<GridText name="keyword" objectPath="CatalogEntryDescription" propertyName="keyword" text="${catalogResources.productKeyword_ColumnHeader}" visible="false" width="90"/>
+		<GridCurrency alignment="right" cloneEnabled="false" editable="true" name="listprice" objectPath="CatalogEntryListPrice" text="${catalogResources.productPrice_ColumnHeader}" visible="false" width="80"/>
+		<GridText editable="false" name="defaultCurrencyCode" objectPath="CatalogEntryListPrice" propertyName="defaultCurrencyCode" text="${catalogResources.productCurrency_ColumnHeader}" visible="false" width="70"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_onSpecial" objectPath="CatalogEntryExtraProperties" propertyName="xprop_onSpecial" text="${catalogResources.productOnSpecial_ColumnHeader}" trueValue="1" visible="false" width="100"/>
+		<GridDate name="xprop_startDate" objectPath="CatalogEntryExtraProperties" propertyName="xprop_startDate" text="${catalogResources.productAnnouncementDate_ColumnHeader}" visible="false" width="150"/>
+		<GridDate name="xprop_endDate" objectPath="CatalogEntryExtraProperties" propertyName="xprop_endDate" text="${catalogResources.productWithdrawalDate_ColumnHeader}" visible="false"/>
+	</ObjectGrid>
+	
+</Definitions>

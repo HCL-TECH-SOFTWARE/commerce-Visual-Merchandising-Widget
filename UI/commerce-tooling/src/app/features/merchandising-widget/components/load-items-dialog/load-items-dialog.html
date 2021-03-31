@@ -1,0 +1,19 @@
+<h1 mat-dialog-title>
+    {{title}}
+</h1>
+<div mat-dialog-content>
+    <p>{{message}}</p>
+</div>
+<mat-form-field appearance="fill">
+	<mat-label>Select</mat-label>
+	<mat-select [(value)]="selected">
+		<mat-option value="5"> 5 </mat-option>
+		<mat-option value="10"> 10 </mat-option>
+		<mat-option value="25"> 25 </mat-option>
+		<mat-option value="50"> 50 </mat-option>
+		<mat-option value="100"> 100 </mat-option>
+	</mat-select>
+</mat-form-field>
+<div mat-dialog-actions>
+    <button mat-raised-button color="primary" (click)="onConfirm(selected)" [disabled]="!selected">Done</button>
+</div>
