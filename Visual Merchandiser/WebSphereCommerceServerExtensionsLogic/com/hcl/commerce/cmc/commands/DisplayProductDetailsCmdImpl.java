@@ -19,7 +19,6 @@
 
 package com.hcl.commerce.cmc.commands;
 
-import java.sql.Clob;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,15 +43,18 @@ public class DisplayProductDetailsCmdImpl extends ControllerCommandImpl implemen
 	public void performExecute() throws ECException {
 		final String METHOD_NAME = "performExecute";
 		LOGGER.entering(CLASS_NAME, METHOD_NAME);
-		Integer catalogId;
+		Integer catalogId = 0;
+		Integer catalogGroupId;
+		Integer storeId = getCommandStoreId();
 		Integer limit;
 		Integer page;
 		Integer offset; //TODO: offset can be implemented as integer (page). offset = (value-1)*limit. -done
-		int language;//TOD: set langId to -1 as default?
-				
+		Integer language;//TOD: set langId to -1 as default?
+		Integer total_Count = 0;
+
 		try{
 			TypedProperty requestProperty = getCommandContext().getRequestProperties();
-			catalogId = requestProperty.getInteger("catalogId");
+			catalogGroupId = requestProperty.getInteger("catalogGroupId");
 			limit = requestProperty.getInteger("limit"); //can implement an upper limit, but implementing only a lower limit of 10
 			page = requestProperty.getInteger("page");//page should start from 1 from front end.
 			language = requestProperty.getInteger("langId"); // not implementing any default or validation for language
@@ -60,20 +62,50 @@ public class DisplayProductDetailsCmdImpl extends ControllerCommandImpl implemen
 			
 			if(page <= 0){ page = 1; }
 			
-			if(limit < 10) { limit = 10; }
-			//There are lot of columns which can be retrieved. Only extracting a few for POC. 
-			//URL, Long Description, Short Description, type
+						
+			String catalogSql = "SELECT CATALOG_ID FROM (SELECT A.STOREENT_ID, A.IDENTIFIER, "
+					+ "CASE "
+					+ "    WHEN C.CATALOG_ID IS NULL THEN D.CATALOG_ID "
+					+ "    WHEN D.CATALOG_ID IS NULL THEN C.CATALOG_ID "
+					+ "END AS CATALOG_ID, C.MASTERCATALOG "
+					+ "FROM STOREENT A "
+					+ "LEFT JOIN STORECAT C ON A.STOREENT_ID = C.STOREENT_ID AND C.MASTERCATALOG = 1 "
+					+ "LEFT JOIN STOREDEFCAT D ON A.STOREENT_ID = D.STOREENT_ID "
+					+ "WHERE C.CATALOG_ID IS NOT NULL OR D.CATALOG_ID IS NOT NULL WITH UR) WHERE STOREENT_ID = ?";
+
+
+			try {
+				List catalogDetails =  new ServerJDBCHelperBean().executeParameterizedQuery(catalogSql, new Object[] {storeId});
+				if(!catalogDetails.isEmpty()) {
+					Object catalogObject=  ((Vector<String>) catalogDetails.get(0)).get(0);
+					String catalog = catalogObject.toString();
+					catalogId = Integer.parseInt(catalog);
+				}
+			}
+			catch(Exception e){
+				e.getMessage();
+				e.getStackTrace();
+			}
+			
 						
 			String sql = "SELECT A.CATALOG_ID, A.CATGROUP_ID, A.CATENTRY_ID, A.SEQUENCE, B.MFNAME, B.BUYABLE, B.URL, B.CATENTTYPE_ID, B.PARTNUMBER, "
-					+ "C.NAME, C.SHORTDESCRIPTION, C.THUMBNAIL, C.FULLIMAGE, C.KEYWORD, C.AVAILABILITYDATE FROM CATGPENREL AS A	"
+					+ "C.NAME, C.SHORTDESCRIPTION, C.THUMBNAIL, C.FULLIMAGE, C.KEYWORD, C.AVAILABILITYDATE, COUNT(*) OVER() AS Total_Count FROM CATGPENREL AS A	"
 					+ "INNER JOIN CATENTRY AS B ON B.CATENTRY_ID = A.CATENTRY_ID INNER JOIN CATENTDESC AS C ON C.CATENTRY_ID = A.CATENTRY_ID "
-					+ "WHERE A.CATALOG_ID = ? AND C.LANGUAGE_ID = ? LIMIT ? OFFSET ? WITH UR;";
-			
-			List catalogList = new ServerJDBCHelperBean().executeParameterizedQuery(sql, new Object[] {catalogId, language, limit, offset});
-			//responseProperty.put("Part Number","tres");
+					+ "WHERE A.CATALOG_ID = ? AND A.CATGROUP_ID = ? AND B.CATENTTYPE_ID IN ('ProductBean', 'BundleBean', 'PackageBean') AND C.LANGUAGE_ID = ? LIMIT ? OFFSET ? WITH UR;";
+		
+			List catalogList = new ServerJDBCHelperBean().executeParameterizedQuery(sql, new Object[] {catalogId, catalogGroupId, language, limit, offset});
+
+
 			JSONArray jsonArray = getResult(catalogList);
 			Map requestMap = new HashMap<String,String>();
 			requestMap.put("data", jsonArray);
+			if(catalogList != null && catalogList.size() != 0) {
+				Vector<String> alist = (Vector<String>) catalogList.get(0);
+				requestMap.put("Total_Records", alist.get(15));
+			}
+			else {
+				requestMap.put("Total_Records", 0);
+			}
 			responseProperty.putAll(requestMap);
 			setResponseProperties(responseProperty);
 		}
@@ -101,8 +133,8 @@ public class DisplayProductDetailsCmdImpl extends ControllerCommandImpl implemen
 					jsonObject.put("part_number",alist.get(8));
 					jsonObject.put("name",alist.get(9));
 					jsonObject.put("short_description",alist.get(10));
-					jsonObject.put("thumbnail",alist.get(11));
-					jsonObject.put("fullimage",alist.get(12));
+					jsonObject.put("thumbnail_path",alist.get(11));
+					jsonObject.put("fullimage_path",alist.get(12));
 					jsonObject.put("keyword",alist.get(13));
 					jsonObject.put("availability_date",alist.get(14));
 					responseArray.add(jsonObject);
