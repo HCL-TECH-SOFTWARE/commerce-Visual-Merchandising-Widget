@@ -19,46 +19,15 @@
 
 package com.hcl.commerce.marketing.management.handler;
 
-import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Vector;
-import javax.ws.rs.GET;
+
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
-import org.apache.commons.json.JSONArray;
-import org.apache.commons.json.JSONException;
-import org.apache.commons.json.JSONObject;
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.SSLContexts;
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.wink.common.http.HttpStatus;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.ibm.commerce.datatype.TypedProperty;
-import com.ibm.commerce.exception.ParameterNotFoundException;
-import com.ibm.commerce.foundation.rest.resourcehandler.AbstractClassicResourceHandler;
 import com.ibm.commerce.rest.classic.core.AbstractConfigBasedClassicHandler;
 import com.ibm.commerce.rest.javadoc.ResponseSchema;
 
@@ -66,7 +35,6 @@ import com.ibm.commerce.rest.javadoc.ResponseSchema;
 public class CatalogRestHandler extends AbstractConfigBasedClassicHandler {
 	private static final String CLASSNAME = CatalogRestHandler.class.getName();
 	private static final String RESOURCE_NAME = "updateProuctSequence";
-	//private static final String UPDATE_PRODUCT_SEQUENCE = "updateProductSequence";
 	private static final String CLASS_NAME_PARAMETER_UPDATE_PRODUCT_SEQUENCE = "com.hcl.commerce.marketing.management.commands.UpdateProductSequenceCmd";
 
 	public String store_Id;
