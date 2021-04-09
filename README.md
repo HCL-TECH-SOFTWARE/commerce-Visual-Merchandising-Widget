@@ -16,7 +16,7 @@ We have provided documentation as well as any needed code artifacts for your use
 
 1. Copy & paste the "com" folder under "WebSphereCommerceServersExtensionLogic" in GIT to "WebSphereCommerceServersExtensionLogic" in RAD.
 2. Copy & paste the two xml files under dataload in GIT to WCDE_V9/xml/policies/xml. Run acpload.bat for the two config files.
-   C:\WCDE_V9\bin>acpload.bat C:\WCDE_V9/xml/policies/xml/CMCProductAccessControlPolicies.xml 
+   C:\WCDE_V9\bin>acpload.bat C:\WCDE_V9/xml/policies/xml/CMCProductAccessControlPolicies.xml
    C:\WCDE_V9\bin>acpload.bat C:\WCDE_V9/xml/policies/xml/CategoryControlPolicies.xml
 3. Copy & paste (append) the contents of "REST/WEB-INF/config" resources-ext.properties in GIT to resources-ext.properties in RAD.
 
