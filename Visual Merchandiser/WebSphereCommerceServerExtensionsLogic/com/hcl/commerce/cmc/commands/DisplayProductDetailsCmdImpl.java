@@ -19,6 +19,7 @@
 
 package com.hcl.commerce.cmc.commands;
 
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,8 +44,8 @@ public class DisplayProductDetailsCmdImpl extends ControllerCommandImpl implemen
 	public void performExecute() throws ECException {
 		final String METHOD_NAME = "performExecute";
 		LOGGER.entering(CLASS_NAME, METHOD_NAME);
-		Integer catalogId = 0;
-		Integer catalogGroupId;
+		BigInteger catalogId = new BigInteger("0");
+		BigInteger catalogGroupId;
 		Integer storeId = getCommandStoreId();
 		Integer limit;
 		Integer page;
@@ -54,11 +55,12 @@ public class DisplayProductDetailsCmdImpl extends ControllerCommandImpl implemen
 
 		try{
 			TypedProperty requestProperty = getCommandContext().getRequestProperties();
-			catalogGroupId = requestProperty.getInteger("catalogGroupId");
-			limit = requestProperty.getInteger("limit"); //can implement an upper limit, but implementing only a lower limit of 10
-			page = requestProperty.getInteger("page");//page should start from 1 from front end.
-			language = requestProperty.getInteger("langId"); // not implementing any default or validation for language
-			offset = (page-1)*limit; 
+			String sCatalogGroupId = requestProperty.getString("catalogGroupId", null);
+			catalogGroupId = new BigInteger(sCatalogGroupId);
+			limit = requestProperty.getInteger("limit", 10); //can implement an upper limit, but implementing only a lower limit of 10
+			page = requestProperty.getInteger("page", 1);//page should start from 1 from front end.
+			language = requestProperty.getInteger("langId", -1); // not implementing any default or validation for language
+			offset = (page-1)*limit;
 			
 			if(page <= 0){ page = 1; }
 			
@@ -79,7 +81,7 @@ public class DisplayProductDetailsCmdImpl extends ControllerCommandImpl implemen
 				if(!catalogDetails.isEmpty()) {
 					Object catalogObject=  ((Vector<String>) catalogDetails.get(0)).get(0);
 					String catalog = catalogObject.toString();
-					catalogId = Integer.parseInt(catalog);
+					catalogId = new BigInteger(catalog);
 				}
 			}
 			catch(Exception e){
@@ -91,7 +93,7 @@ public class DisplayProductDetailsCmdImpl extends ControllerCommandImpl implemen
 			String sql = "SELECT A.CATALOG_ID, A.CATGROUP_ID, A.CATENTRY_ID, A.SEQUENCE, B.MFNAME, B.BUYABLE, B.URL, B.CATENTTYPE_ID, B.PARTNUMBER, "
 					+ "C.NAME, C.SHORTDESCRIPTION, C.THUMBNAIL, C.FULLIMAGE, C.KEYWORD, C.AVAILABILITYDATE, COUNT(*) OVER() AS Total_Count FROM CATGPENREL AS A	"
 					+ "INNER JOIN CATENTRY AS B ON B.CATENTRY_ID = A.CATENTRY_ID INNER JOIN CATENTDESC AS C ON C.CATENTRY_ID = A.CATENTRY_ID "
-					+ "WHERE A.CATALOG_ID = ? AND A.CATGROUP_ID = ? AND B.CATENTTYPE_ID IN ('ProductBean', 'BundleBean', 'PackageBean') AND C.LANGUAGE_ID = ? LIMIT ? OFFSET ? WITH UR;";
+					+ "WHERE A.CATALOG_ID = ? AND A.CATGROUP_ID = ? AND B.CATENTTYPE_ID IN ('ProductBean', 'BundleBean', 'PackageBean') AND C.LANGUAGE_ID = ? ORDER BY A.SEQUENCE LIMIT ? OFFSET ? WITH UR;";
 		
 			List catalogList = new ServerJDBCHelperBean().executeParameterizedQuery(sql, new Object[] {catalogId, catalogGroupId, language, limit, offset});
 
@@ -122,9 +124,9 @@ public class DisplayProductDetailsCmdImpl extends ControllerCommandImpl implemen
 				try {
 					Vector<String> alist =(Vector<String>) catalogList.get(index);
 					JSONObject jsonObject = new JSONObject();
-					jsonObject.put("catalogId", alist.get(0));
-					jsonObject.put("catalogGroupId",alist.get(1));
-					jsonObject.put("catalogEntryId",alist.get(2));
+					jsonObject.put("catalogId", String.valueOf(alist.get(0)));
+					jsonObject.put("catalogGroupId", String.valueOf(alist.get(1)));
+					jsonObject.put("catalogEntryId", String.valueOf(alist.get(2)));
 					jsonObject.put("sequence",alist.get(3));
 					jsonObject.put("manufacturer",alist.get(4));
 					jsonObject.put("buyable",alist.get(5));
