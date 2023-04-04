@@ -2,19 +2,11 @@
 
 <!--
  =================================================================
-  Copyright [2021] [HCL Technologies]
-	
-	Licensed under the Apache License, Version 2.0 (the "License");
-	you may not use this file except in compliance with the License.
-	You may obtain a copy of the License at
-	
-	    http://www.apache.org/licenses/LICENSE-2.0
-	
-	Unless required by applicable law or agreed to in writing, software
-	distributed under the License is distributed on an "AS IS" BASIS,
-	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	See the License for the specific language governing permissions and
-	limitations under the License.
+  Licensed Materials - Property of HCL Technologies
+
+  HCL Commerce
+
+  (C) Copyright HCL Technologies Limited 1996, 2021
 
  =================================================================
 -->
@@ -307,7 +299,7 @@
 						var catgroupName = o.objectDisplayName;
 						var storeId=o.objectStoreId;
 						console.log("catgroupId="+catgroupId,o.objectStoreId);					
-						var resequenceCatalogItemUrl = "https://localhost:7443/tooling/merchandising-widget?categoryName="+catgroupName+"&categoryId="+catgroupId+"&storeId="+storeId;
+						var resequenceCatalogItemUrl = "https://commerce-preview.comdx.demo.com/tooling/merchandising-widget?categoryName="+catgroupName+"&categoryId="+catgroupId+"&storeId="+storeId;
 					
 						if (!this.resequenceCatalogItemCompleteDel) {
 							this.resequenceCatalogItemCompleteDel = new EventHandler.Class(this, "resequenceCatalogItemComplete");
@@ -360,6 +352,11 @@
 	<CustomActionDefinition actionWidgetClass="cmc/catalog/ResequenceButton"/>
 	</ChildListEditor>
 <!-- Merchandising Widget Work-->
+	<!--
+		This definition is used to navigate the catalog entries underneath catalog groups.
+	-->
+	<ChildListEditor definitionName="cmc/catalog/CatalogEntryChildList" listDefinition="cmc/catalog/CatalogEntryBrowseGrid" objectTypes="ChildProduct,ChildCatalogGroupSKU,ChildKit,ChildBundle,ChildVariant,ChildInheritedProduct,ChildInheritedCatalogGroupSKU,ChildInheritedKit,ChildInheritedBundle,ChildInheritedVariant"/>
+
 	<!--
 		This definition is used to list the catalog entries underneath the unassigned catalog group.
 	-->
@@ -742,7 +739,7 @@
 			<GridRichText name="xdesc_auxDescription2" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_auxDescription2" text="${catalogResources.productAux2_ColumnHeader}" visible="true" width="200"/>
 		-->
 		<GridCheckbox alignment="center" falseValue="0" name="xdesc_published" objectPath="CatalogEntry/CatalogEntryDescription" propertyName="xdesc_published" text="${catalogResources.productPublished_ColumnHeader}" trueValue="1" visible="false" width="140"/>
-		<GridCheckbox alignment="center" falseValue="0" name="xprop_buyable" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_buyable" text="${catalogResources.productBuyable_ColumnHeader}" trueValue="0" visible="false" width="90"/>
+		<GridCheckbox alignment="center" falseValue="0" name="xprop_buyable" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_buyable" text="${catalogResources.productBuyable_ColumnHeader}" trueValue="1" visible="false" width="90"/>
 		<GridCheckbox alignment="center" falseValue="1" name="xprop_state" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_state" text="${catalogResources.productHide_ColumnHeader}" trueValue="0" visible="true" width="90"/>
 		<GridText name="xprop_manufacturerPartNumber" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturerPartNumber" text="${catalogResources.productManufacturerPartNumber_ColumnHeader}" visible="false" width="200"/>
 		<GridText name="xprop_manufacturer" objectPath="CatalogEntry/CatalogEntryExtraProperties" propertyName="xprop_manufacturer" text="${catalogResources.productmanufacturer_ColumnHeader}" visible="false" width="200"/>
