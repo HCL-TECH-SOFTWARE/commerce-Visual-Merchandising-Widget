@@ -1,5 +1,22 @@
+<!--
+*-------------------------------------------------------------------
+* Copyright [2022] [HCL America, Inc.]
+ 
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+ 
+* http://www.apache.org/licenses/LICENSE-2.0
+ 
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*-------------------------------------------------------------------
+-->
 <div id="container" class="merchandising-widget">
-	<div class="merchandising-widget-header hc-paper">
+	<div class="merchandising-widget-header">
 		<div class="merchandising-widget-input">
 			<div class="hc-type-text">
 				<h5>{{categoryName}} - Catalog Entries List </h5>
@@ -15,7 +32,11 @@
 	</div>
 	<div class="merchandising-widget-wrapper">
 		<div *ngIf="products.length>0" #rowLayout cdkDropListGroup cdkDropListGroupDisabled="{{!isChecked}}" >
-			<div style="display: flex;flex-direction: row;justify-content: flex-start;" fxLayout="row"
+			<div style="display: flex;
+					flex-direction: row;
+					align-content: center;
+					justify-content: flex-start;"
+					fxLayout="row"
 				*ngFor="let itemsRow of getItemsTable(rowLayout)" cdkDropList cdkDropListOrientation="horizontal"
 				[cdkDropListData]="itemsRow" (cdkDropListDropped)="reorderDroppedItem($event)" >
 				<div class="box-data" *ngFor="let item of itemsRow" cdkDrag [cdkDragData]="item" (cdkDragMoved)="onDragMoved($event)">
@@ -29,12 +50,12 @@
 								<mat-card-subtitle>{{item.part_number}}</mat-card-subtitle>
 							</mat-card-header>
 							<img mat-card-image
-								[src]="item.thumbnail_path? 'https://localhost:6443/hclstore/EmeraldCAS'+item.thumbnail_path:'https://kubalubra.is/wp-content/uploads/2017/11/default-thumbnail.jpg'"
+								[src]="item.thumbnail_path? 'https://commerce-preview.comdx.demo.com/lobtools/LoadImage?storeId='+storeId+'&imageURL='+item.thumbnail_path:'https://kubalubra.is/wp-content/uploads/2017/11/default-thumbnail.jpg'"
 								(error)="loadDummyImage($event)"
 								alt="thumbnail">
 							<mat-card-content>
 								<!--<p>
-									<mat-label>Manufacture : </mat-label>  {{item.manufacturer}}https://localhost:7443/lobtools/LoadImage?storeId=10501&imageURL=
+									<mat-label>Manufacture : </mat-label>  {{item.manufacturer}}https://commerce-preview.comdx.demo.com/lobtools/LoadImage?storeId=10501&imageURL=
 								</p>
 								<p>
 									<mat-label>Catalog ID : </mat-label> : {{item.catalogId}}

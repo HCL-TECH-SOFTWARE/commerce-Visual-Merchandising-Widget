@@ -1,6 +1,6 @@
 /**
 	*==================================================
-	Copyright [2021] [HCL Technologies]
+	Copyright [2022] [HCL America, Inc.]
 	
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -98,8 +98,11 @@ const routes: Routes = [
 	},
 	/*Merchandising widget*/
 	{
-		path:"merchandising-widget",
-		loadChildren: "./features/merchandising-widget/merchandising-widget.module#MerchandisingWidgetModule"
+		path: "merchandising-widget",
+		loadChildren: () =>
+			import("./features/merchandising-widget/merchandising-widget.module").then(
+				(m) => m.MerchandisingWidgetModule
+			)
 	}
 	/*Merchandising widget*/
 ];

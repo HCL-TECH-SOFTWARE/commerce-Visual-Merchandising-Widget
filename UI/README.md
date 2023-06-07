@@ -11,13 +11,16 @@
   Follow below steps to implement the merchandiser widget UI.
   
   1. Add the `merchandising-widget` folder in the path `commerce-tooling/src/app/features`.It has all the components required for the widget.
-  2. Add the `merchandiser.service.ts` file in the path `commerce-tooling/src/app/rest/service`. It has the Rest APIs details used for merchandiser widget.
+  2. Add the `merchandiser.service.ts` file in the path `commerce-tooling/src/app/rest/services`. It has the Rest APIs details used for merchandiser widget.
   3. Add the below entry in the `app-routing.module.ts` file placed inside `commerce-tooling/src/app`.
       ```ruby
         /*Merchandising widget*/
         {
-          path:"merchandising-widget",
-          loadChildren: "./features/merchandising-widget/merchandising-widget.module#MerchandisingWidgetModule"
+          path: "merchandising-widget",
+		loadChildren: () =>
+			import("./features/merchandising-widget/merchandising-widget.module").then(
+				(m) => m.MerchandisingWidgetModule
+			)
         }
         /*Merchandising widget*/
         
